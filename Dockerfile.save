@@ -1,0 +1,38 @@
+# Використовуємо офіційний образ PHP
+FROM php:7.4-apache
+
+# Встановлюємо залежності
+RUN apt-get update && apt-get install -y \
+    git \
+    zip \
+    unzip \
+    libicu-dev \
+    libpng-dev \
+    libzip-dev \
+    && docker-php-ext-install -j$(nproc) pdo_mysql intl gd zip
+
+# Копіюємо файли проекту до контейнера
+COPY . /var/www/html/
+RUN mkdir /var/www/html/public
+# Встановлюємо права доступу до директорії з файлами
+RUN chown -R www-data:www-data /var/www/html/
+RUN chmod -R 755 /var/www/html/
+
+# Встановлюємо деякі конфігураційні параметри Apache
+RUN a2enmod rewrite
+ENV APACHE_DOCUMENT_ROOT /var/www/html/public
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available*.conf
+RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+
+# Встановлюємо змінні середовища
+ENV MYSQL_HOST=localhost
+ENV MYSQL_PORT=3306
+ENV MYSQL_DATABASE=car_sale
+ENV MYSQL_USER=kolya
+ENV MYSQL_PASSWORD=root
+
+# Відкриваємо порти
+EXPOSE 80
+
+# Запускаємо Apache при запуску контейнера
+CMD ["apache2-foreground"]
